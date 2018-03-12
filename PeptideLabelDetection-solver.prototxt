@@ -1,0 +1,15 @@
+net: 'PeptideLabelDetection-train.prototxt'
+base_lr:         0.00001
+momentum:        0.9
+momentum2:       0.999
+lr_policy:       "step"
+gamma:           0.5
+stepsize:        10000
+max_iter:        100000
+display:         1
+snapshot:        100
+snapshot_prefix: 'PeptideLabelDetection/PeptideLabelDetection_snapshot'
+snapshot_format: HDF5
+type:            "SGD"
+solver_mode:     GPU
+debug_info:      0
