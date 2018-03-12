@@ -1,0 +1,154 @@
+name: 'PeptideLabelDetection'
+force_backward: true
+
+layer { top: 'data' top: 'label' top: 'label_weight' name: 'load_data' type: 'Input'  input_param { shape: { dim: 1 dim: 1 dim: 892 dim: 15592} shape: { dim: 1 dim: 1 dim: 892 dim: 15592} shape: { dim: 1 dim: 1 dim: 892 dim: 15592} } include: { phase: TRAIN }}
+#layer { bottom: 'data'               name: 'debug_h5' type: 'HDF5Output' hdf5_output_param { file_name: "debug.h5" dset_name: "/data" squeeze: 1} include: { phase: TRAIN }}
+#layer { bottom: 'label'               name: 'debug_h5' type: 'HDF5Output' hdf5_output_param { file_name: "debug_l.h5" dset_name: "/label" squeeze: 1} include: { phase: TRAIN }}
+#layer { bottom: 'label_weight'               name: 'debug_h5' type: 'HDF5Output' hdf5_output_param { file_name: "debug_lw.h5" dset_name: "/label_weight" squeeze: 1} include: { phase: TRAIN }}
+layer { bottom: 'label_weight' top: 'def' name: 'create_deformation' type: 'CreateDeformation' create_deformation_param {
+            batch_size: 1 ny: 892 nx: 15592 ncomponents: 2
+            random_offset_from {v: 0 v: 0}
+            random_offset_to {v: 0 v: 0}
+        }
+        include: { phase: TRAIN } }
+
+layer { bottom: 'data' bottom: 'def' top: 'd0a'  name: 'def_data-defdata'   type: 'ApplyDeformation'  apply_deformation_param { interpolation: 'linear' extrapolation: 'mirror'} include: { phase: TRAIN }}
+
+#layer { bottom: 'd0a'               name: 'save-augmented' type: 'HDF5Output' hdf5_output_param { file_name: "debug.h5" dset_name: "/augmented" squeeze: 1} include: { phase: TRAIN }}
+
+#################################################
+layer { bottom: 'd0a'               top: 'd0b_inter'   name: 'conv_d0a-b'     type: 'Convolution'   param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }  convolution_param { num_output: 8   pad: 0 kernel_h: 1 kernel_w: 21 weight_filler { type: 'msra' } bias_filler { type: "constant" value: -0.5 } } }
+# layer { bottom: 'd0b_inter'               name: 'debug_h5_d0b' type: 'HDF5Output' hdf5_output_param { file_name: "debug_d0b.h5" dset_name: "/d0b" squeeze: 1} include: { phase: TEST }}
+layer { bottom: 'd0b_inter'               top: 'd0b'   name: 'relu_d0b'       type: 'ReLU'          relu_param {negative_slope: 0.1}}
+layer { bottom: 'd0b'               top: 'd0c'   name: 'conv_d0b-c'     type: 'Convolution'   param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }  convolution_param { num_output: 8   pad: 0 kernel_h: 1 kernel_w: 21 weight_filler { type: 'msra' } } }
+layer { bottom: 'd0c'               top: 'd0c'   name: 'relu_d0c'       type: 'ReLU'          relu_param {negative_slope: 0.1}}
+layer { bottom: 'd0c'               top: 'd1a'   name: 'pool_d0c-1a'    type: 'Pooling'       pooling_param { pool: MAX kernel_h: 1 kernel_w: 8 stride_h: 1 stride_w: 8} }
+#################################################
+
+
+#################################################
+layer { bottom: 'd1a'               top: 'd1b'   name: 'conv_d1a-b'     type: 'Convolution'   param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }  convolution_param { num_output: 16  pad: 0 kernel_h: 3 kernel_w: 21 weight_filler { type: 'msra' } } }
+layer { bottom: 'd1b'               top: 'd1b'   name: 'relu_d1b'       type: 'ReLU'          relu_param {negative_slope: 0.1}}
+layer { bottom: 'd1b'               top: 'd1c'   name: 'conv_d1b-c'     type: 'Convolution'   param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }  convolution_param { num_output: 16  pad: 0 kernel_h: 3 kernel_w: 21 weight_filler { type: 'msra' } } }
+layer { bottom: 'd1c'               top: 'd1c'   name: 'relu_d1c'       type: 'ReLU'          relu_param {negative_slope: 0.1}}
+layer { bottom: 'd1c'               top: 'd2a'   name: 'pool_d1c-2a'    type: 'Pooling'       pooling_param { pool: MAX kernel_h: 2 kernel_w: 4 stride_h: 2 stride_w: 4 } }
+#################################################
+
+
+#################################################
+layer { bottom: 'd2a'               top: 'd2b'   name: 'conv_d2a-b'     type: 'Convolution'   param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }  convolution_param { num_output: 32  pad: 0 kernel_size: 3 weight_filler { type: 'msra' } } }
+layer { bottom: 'd2b'               top: 'd2b'   name: 'relu_d2b'       type: 'ReLU'          relu_param {negative_slope: 0.1}}
+layer { bottom: 'd2b'               top: 'd2c'   name: 'conv_d2b-c'     type: 'Convolution'   param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }  convolution_param { num_output: 32  pad: 0 kernel_size: 3 weight_filler { type: 'msra' } } }
+layer { bottom: 'd2c'               top: 'd2c'   name: 'relu_d2c'       type: 'ReLU'          relu_param {negative_slope: 0.1}}
+layer { bottom: 'd2c'               top: 'd3a'   name: 'pool_d2c-3a'    type: 'Pooling'       pooling_param { pool: MAX kernel_size: 2 stride: 2 } }
+#################################################
+
+
+#################################################
+layer { bottom: 'd3a'               top: 'd3b'   name: 'conv_d3a-b'     type: 'Convolution'   param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }  convolution_param { num_output: 64  pad: 0 kernel_size: 3 weight_filler { type: 'msra' } } }
+layer { bottom: 'd3b'               top: 'd3b'   name: 'relu_d3b'       type: 'ReLU'          relu_param {negative_slope: 0.1}}
+layer { bottom: 'd3b'               top: 'd3c'   name: 'conv_d3b-c'     type: 'Convolution'   param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }  convolution_param { num_output: 64  pad: 0 kernel_size: 3 weight_filler { type: 'msra' } } }
+layer { bottom: 'd3c'               top: 'd3c'   name: 'relu_d3c'       type: 'ReLU'          relu_param {negative_slope: 0.1}}
+layer { bottom: 'd3c'               top: 'd4a'   name: 'pool_d3c-4a'    type: 'Pooling'       pooling_param { pool: MAX kernel_size: 2 stride: 2 } }
+#################################################
+
+#################################################
+layer { bottom: 'd4a'               top: 'd4b'   name: 'conv_d4a-b'     type: 'Convolution'   param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }  convolution_param { num_output: 128  pad: 0 kernel_size: 3 weight_filler { type: 'msra' } } }
+layer { bottom: 'd4b'               top: 'd4b'   name: 'relu_d4b'       type: 'ReLU'          relu_param {negative_slope: 0.1}}
+layer { bottom: 'd4b'               top: 'd4c'   name: 'conv_d4b-c'     type: 'Convolution'   param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }  convolution_param { num_output: 128  pad: 0 kernel_size: 3 weight_filler { type: 'msra' } } }
+layer { bottom: 'd4c'               top: 'd4c'   name: 'relu_d4c'       type: 'ReLU'          relu_param {negative_slope: 0.1}}
+layer { bottom: 'd4c'               top: 'd5a'   name: 'pool_d4c-5a'    type: 'Pooling'       pooling_param { pool: MAX kernel_size: 2 stride: 2 } }
+#################################################
+
+#################################################
+layer { bottom: 'd5a'               top: 'd5b'   name: 'conv_d5a-b'     type: 'Convolution'   param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }  convolution_param { num_output: 256  pad: 0 kernel_size: 3 weight_filler { type: 'msra' } } }
+layer { bottom: 'd5b'               top: 'd5b'   name: 'relu_d5b'       type: 'ReLU'          relu_param {negative_slope: 0.1}}
+layer { bottom: 'd5b'               top: 'd5c'   name: 'conv_d5b-c'     type: 'Convolution'   param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }  convolution_param { num_output: 256  pad: 0 kernel_size: 3 weight_filler { type: 'msra' } } }
+layer { bottom: 'd5c'               top: 'd5c'   name: 'relu_d5c'       type: 'ReLU'          relu_param {negative_slope: 0.1}}
+layer { bottom: 'd5c'               top: 'd6a'   name: 'pool_d5c-6a'    type: 'Pooling'       pooling_param { pool: MAX kernel_size: 2 stride: 2 } }
+#################################################
+
+#################################################
+layer { bottom: 'd6a'               top: 'd6b'   name: 'conv_d6a-b'     type: 'Convolution'   param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }  convolution_param { num_output: 512  pad: 0 kernel_size: 3 weight_filler { type: 'msra' } } }
+layer { bottom: 'd6b'               top: 'd6b'   name: 'relu_d6b'       type: 'ReLU' relu_param {negative_slope: 0.1}}
+layer { bottom: 'd6b'               top: 'd6c'   name: 'conv_d6b-c'     type: 'Convolution'   param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }  convolution_param { num_output: 512  pad: 0 kernel_size: 3 weight_filler { type: 'msra' } } }
+layer { bottom: 'd6c'               top: 'd6c'   name: 'relu_d6c'       type: 'ReLU' relu_param {negative_slope: 0.1}}
+#################################################
+
+#################################################
+layer { bottom: 'd6c'               top: 'u5a'   name: 'upconv_d6c_u5a' type: 'Deconvolution'   param { lr_mult: 0 decay_mult: 0 } param { lr_mult: 0 decay_mult: 0 }  convolution_param { num_output: 512  pad: 0 kernel_size: 2 stride: 2 weight_filler { type: "constant" value: 0 } bias_filler { type: "constant" value: 0 }} }
+layer { bottom: 'u5a'               top: 'u5b'   name: 'conv_u5a-b'     type: 'Convolution'   param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }  convolution_param { num_output: 256  pad: 0 kernel_size: 1 weight_filler { type: 'msra' }} }
+
+layer { bottom: 'u5b' bottom: 'd5c' top: 'u5c'   name: 'concat_d5c_u5b-c'  type: 'Concat' }
+layer { bottom: 'u5c'               top: 'u5d'   name: 'conv_u5c-d'     type: 'Convolution'   param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }  convolution_param { num_output: 256  pad: 0 kernel_size: 3 weight_filler { type: 'msra' }} }
+layer { bottom: 'u5d'               top: 'u5d'   name: 'relu_u5d'       type: 'ReLU' relu_param {negative_slope: 0.1}}
+layer { bottom: 'u5d'               top: 'u5e'   name: 'conv_u5d-e'     type: 'Convolution'   param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }  convolution_param { num_output: 256  pad: 0 kernel_size: 3 weight_filler { type: 'msra' }} }
+layer { bottom: 'u5e'               top: 'u5e'   name: 'relu_u5e'       type: 'ReLU' relu_param {negative_slope: 0.1}}
+#################################################
+
+#################################################
+layer { bottom: 'u5e'               top: 'u4a'   name: 'upconv_u5e_u4a' type: 'Deconvolution'   param { lr_mult: 0 decay_mult: 0 } param { lr_mult: 0 decay_mult: 0 }  convolution_param { num_output: 256  pad: 0 kernel_size: 2 stride: 2 weight_filler { type: "constant" value: 0 } bias_filler { type: "constant" value: 0 }} }
+
+layer { bottom: 'u4a'               top: 'u4b'   name: 'conv_u4a-b'     type: 'Convolution'   param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }  convolution_param { num_output: 128  pad: 0 kernel_size: 1 weight_filler { type: 'msra' }} }
+
+layer { bottom: 'u4b' bottom: 'd4c' top: 'u4c'   name: 'concat_d4c_u4b-c'  type: 'Concat' }
+layer { bottom: 'u4c'               top: 'u4d'   name: 'conv_u4c-d'     type: 'Convolution'   param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }  convolution_param { num_output: 128  pad: 0 kernel_size: 3 weight_filler { type: 'msra' }} }
+layer { bottom: 'u4d'               top: 'u4d'   name: 'relu_u4d'       type: 'ReLU' relu_param {negative_slope: 0.1}}
+layer { bottom: 'u4d'               top: 'u4e'   name: 'conv_u4d-e'     type: 'Convolution'   param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }  convolution_param { num_output: 128  pad: 0 kernel_size: 3 weight_filler { type: 'msra' }} }
+layer { bottom: 'u4e'               top: 'u4e'   name: 'relu_u4e'       type: 'ReLU' relu_param {negative_slope: 0.1}}
+#################################################
+
+#################################################
+layer { bottom: 'u4e'               top: 'u3a'   name: 'upconv_u4e_u3a' type: 'Deconvolution'   param { lr_mult: 0 decay_mult: 0 } param { lr_mult: 0 decay_mult: 0 }  convolution_param { num_output: 128  pad: 0 kernel_size: 2 stride: 2 weight_filler { type: "constant" value: 0 } bias_filler { type: "constant" value: 0 }} }
+layer { bottom: 'u3a'               top: 'u3b'   name: 'conv_u3a-b'     type: 'Convolution'   param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }  convolution_param { num_output: 64  pad: 0 kernel_size: 1 weight_filler { type: 'msra' }} }
+
+layer { bottom: 'u3b' bottom: 'd3c' top: 'u3c'   name: 'concat_d3c_u3b-c'  type: 'Concat' }
+layer { bottom: 'u3c'               top: 'u3d'   name: 'conv_u3c-d'     type: 'Convolution'   param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }  convolution_param { num_output: 64  pad: 0 kernel_size: 3 weight_filler { type: 'msra' }} }
+layer { bottom: 'u3d'               top: 'u3d'   name: 'relu_u3d'       type: 'ReLU' relu_param {negative_slope: 0.1}}
+layer { bottom: 'u3d'               top: 'u3e'   name: 'conv_u3d-e'     type: 'Convolution'   param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }  convolution_param { num_output: 64  pad: 0 kernel_size: 3 weight_filler { type: 'msra' }} }
+layer { bottom: 'u3e'               top: 'u3e'   name: 'relu_u3e'       type: 'ReLU' relu_param {negative_slope: 0.1}}
+#################################################
+
+#################################################
+layer { bottom: 'u3e'               top: 'u2a'   name: 'upconv_u3e_u2a' type: 'Deconvolution'   param { lr_mult: 0 decay_mult: 0 } param { lr_mult: 0 decay_mult: 0 }  convolution_param { num_output: 64  pad: 0 kernel_size: 2 stride: 2 weight_filler { type: "constant" value: 0 } bias_filler { type: "constant" value: 0 }} }
+layer { bottom: 'u2a'               top: 'u2b'   name: 'conv_u2a-b'     type: 'Convolution'   param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }  convolution_param { num_output: 32  pad: 0 kernel_size: 1 weight_filler { type: 'msra' }} }
+
+layer { bottom: 'u2b' bottom: 'd2c' top: 'u2c'   name: 'concat_d2c_u2b-c'  type: 'Concat' }
+layer { bottom: 'u2c'               top: 'u2d'   name: 'conv_u2c-d'     type: 'Convolution'   param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }  convolution_param { num_output: 32  pad: 0 kernel_size: 3 weight_filler { type: 'msra' }} }
+layer { bottom: 'u2d'               top: 'u2d'   name: 'relu_u2d'       type: 'ReLU' relu_param {negative_slope: 0.1}}
+layer { bottom: 'u2d'               top: 'u2e'   name: 'conv_u2d-e'     type: 'Convolution'   param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }  convolution_param { num_output: 32  pad: 0 kernel_size: 3 weight_filler { type: 'msra' }} }
+layer { bottom: 'u2e'               top: 'u2e'   name: 'relu_u2e'       type: 'ReLU' relu_param {negative_slope: 0.1}}
+#################################################
+
+
+#################################################
+layer { bottom: 'u2e'               top: 'u1a'   name: 'upconv_u2e_u1a' type: 'Deconvolution'   param { lr_mult: 0 decay_mult: 0 } param { lr_mult: 0 decay_mult: 0 }  convolution_param { num_output: 32  pad: 0 kernel_h: 2 kernel_w: 4 stride_h: 2 stride_w: 4 weight_filler { type: "constant" value: 1 } bias_filler { type: "constant" value: 0 }} }
+layer { bottom: 'u1a'               top: 'u1b'   name: 'conv_u1a-b'     type: 'Convolution'     param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }  convolution_param { num_output: 16  pad: 0 kernel_size: 1 weight_filler { type: 'msra' }} }
+layer { bottom: 'u1b' bottom: 'd1c' top: 'u1c'   name: 'concat_d1c_u1b-c'  type: 'Concat' }
+layer { bottom: 'u1c'               top: 'u1d'   name: 'conv_u1c-d'     type: 'Convolution'     param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }  convolution_param { num_output: 16  pad: 0 kernel_h: 3 kernel_w: 21 weight_filler { type: 'msra' }} }
+layer { bottom: 'u1d'               top: 'u1d'   name: 'relu_u1d'       type: 'ReLU' relu_param {negative_slope: 0.1}}
+layer { bottom: 'u1d'               top: 'u1e'   name: 'conv_u1d-e'     type: 'Convolution'     param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }  convolution_param { num_output: 16  pad: 0 kernel_h: 3 kernel_w: 21 weight_filler { type: 'msra' }} }
+layer { bottom: 'u1e'               top: 'u1e'   name: 'relu_u1e'       type: 'ReLU' relu_param {negative_slope: 0.1}}
+#################################################
+
+
+#################################################
+layer { bottom: 'u1e'               top: 'u0a'   name: 'upconv_u1e_u0a' type: 'Deconvolution'   param { lr_mult: 0 decay_mult: 0 } param { lr_mult: 0 decay_mult: 0 }  convolution_param { num_output: 16 pad: 0 kernel_h: 1 kernel_w: 8 stride_h: 1 stride_w: 8 weight_filler { type: "constant" value: 1 } bias_filler { type: "constant" value: 0 }} }
+layer { bottom: 'u0a'               top: 'u0b'   name: 'conv_u0a-b'     type: 'Convolution'     param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }  convolution_param { num_output: 8 pad: 0 kernel_size: 1 weight_filler { type: 'msra' }} }
+layer { bottom: 'u0b' bottom: 'd0c' top: 'u0c'   name: 'concat_d0c_u0b-c'  type: 'Concat' }
+layer { bottom: 'u0c'               top: 'u0d'   name: 'conv_u0c-d'     type: 'Convolution'     param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }  convolution_param { num_output: 8 pad: 0 kernel_h: 1 kernel_w: 21 weight_filler { type: 'msra' }} }
+layer { bottom: 'u0d'               top: 'u0d'   name: 'relu_u0d'       type: 'ReLU' relu_param {negative_slope: 0.1}}
+layer { bottom: 'u0d'               top: 'u0e'   name: 'conv_u0d-e'     type: 'Convolution'     param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 2 decay_mult: 0 }  convolution_param { num_output: 8 pad: 0 kernel_h: 1 kernel_w: 21 weight_filler {type: 'msra' }} }
+layer { bottom: 'u0e'               top: 'u0e'   name: 'relu_u0e'       type: 'ReLU' relu_param {negative_slope: 0.1}}
+#################################################
+
+
+layer { bottom: 'u0e'               top: 'score' name: 'conv_u0e-score' type: 'Convolution'   param { lr_mult: 1 decay_mult: 1 } param { lr_mult: 1 decay_mult: 0 }  convolution_param { num_output: 2 pad: 0 kernel_size: 1 weight_filler { type: 'msra' }} }
+
+layer { bottom: 'label'   bottom: 'def' top: 'labelcrop'    name: 'def_label-crop'     type: 'ApplyDeformation'  apply_deformation_param { interpolation: 'nearest' extrapolation: 'mirror' output_shape_from: 'u0e'} include: { phase: TRAIN }}
+
+layer { bottom: 'label_weight' bottom: 'def' top: 'weightscrop'  name: 'def_weights-crop'   type: 'ApplyDeformation'  apply_deformation_param { interpolation: 'linear' extrapolation: 'mirror' output_shape_from: 'u0e'} include: { phase: TRAIN }}
+
+layer { bottom: 'score' bottom: 'labelcrop' bottom: 'weightscrop' top: 'loss'  name: 'loss'   type: 'SoftmaxWithLoss' include: { phase: TRAIN }}
+
+layer { bottom: 'score' top: 'prediction'  name: 'softmax_score'   type: 'Softmax' include: { phase: TEST }}
