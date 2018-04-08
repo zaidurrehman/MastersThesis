@@ -9,7 +9,7 @@ This project aimed at processing MS spectra images for peptide feature detection
 using CNN’s ability for solving localization and semantic segmentation problems.
 
 ## CNN architecutre known as U-Net [1]
-U-Net with five levels of resolution was used during this project.
+U-Net, with five levels of resolution, was used during this project.
 ![U-Net architecture](https://github.com/zaidurrehman/MastersThesis/blob/master/misc/architecture.png)
 
 For more details, take a look at the PDFs.
